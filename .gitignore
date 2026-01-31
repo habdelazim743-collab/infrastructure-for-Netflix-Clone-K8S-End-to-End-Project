@@ -1,0 +1,29 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfstate
+terraform.tfstate.backup
+
+# Terraform variables (secrets)
+*.tfvars
+*.tfvars.json
+
+# SSH keys
+*.pem
+*.key
+
+# Env files
+.env
+
+# Editors
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+
+# Node / Python (if exists)
+node_modules/
+__pycache__/
+
