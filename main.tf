@@ -23,9 +23,9 @@ module "subnets" {
 # IAM Module
 # ==========================
 module "iam" {
-  source      = "./modules/iam"
-  group_name  = var.iam_group_name
-  users       = var.iam_users
+  source     = "./modules/iam"
+  group_name = var.iam_group_name
+  users      = var.iam_users
 }
 
 # ==========================
