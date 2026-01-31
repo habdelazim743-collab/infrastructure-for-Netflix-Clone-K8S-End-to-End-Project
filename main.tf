@@ -129,3 +129,38 @@ resource "aws_security_group_rule" "allow_jenkins_to_eks_control_plane" {
   security_group_id        = module.eks.cluster_security_group_id
   source_security_group_id = module.security_groups.public_security_group_id
 }
+# ==========================
+# IAM IRSA (ALB Controller)
+# ==========================
+module "iam_irsa" {
+  source = "./modules/iam_irsa"
+
+  oidc_issuer_url = module.eks.oidc_issuer_url
+}
+# ==========================
+# Kubernetes Addons (ALB Controller)
+# ==========================
+module "k8s_addons" {
+  source = "./modules/k8s_addons"
+
+  cluster_name               = var.eks_cluster_name
+  alb_controller_role_arn    = module.iam_irsa.alb_controller_role_arn
+}
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+  token                  = data.aws_eks_cluster_auth.this.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+    token                  = data.aws_eks_cluster_auth.this.token
+  }
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = var.eks_cluster_name
+}
+
