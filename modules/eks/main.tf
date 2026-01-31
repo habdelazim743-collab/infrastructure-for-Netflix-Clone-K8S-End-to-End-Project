@@ -90,3 +90,11 @@ resource "aws_eks_node_group" "managed_nodes" {
 
   depends_on = [aws_eks_cluster.cluster]
 }
+resource "aws_eks_cluster" "this" {
+  name     = var.cluster_name
+  role_arn = aws_iam_role.eks_cluster.arn
+
+  vpc_config {
+    subnet_ids = var.private_subnets
+  }
+}
