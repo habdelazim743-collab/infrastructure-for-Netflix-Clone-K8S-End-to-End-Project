@@ -27,3 +27,6 @@ terraform.tfstate.backup
 node_modules/
 __pycache__/
 
+.terraform/
+*.tfstate*
+
