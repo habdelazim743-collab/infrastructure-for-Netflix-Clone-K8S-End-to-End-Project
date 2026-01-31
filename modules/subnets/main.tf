@@ -14,15 +14,15 @@ resource "aws_internet_gateway" "igw" {
 # - map_public_ip_on_launch = true
 # - It will be associated with a route table that has a route to the IGW
 #resource "aws_subnet" "public" {
- # for_each = {for idx, cidr in var.public_subnet_cidr : idx => cidr }
- # vpc_id                  = var.vpc_id
- # cidr_block              = each.value
- # availability_zone       = var.azs[each.key % length(var.azs)]          # First Availability Zone
-  #map_public_ip_on_launch = true                # Instances get a public IP
+# for_each = {for idx, cidr in var.public_subnet_cidr : idx => cidr }
+# vpc_id                  = var.vpc_id
+# cidr_block              = each.value
+# availability_zone       = var.azs[each.key % length(var.azs)]          # First Availability Zone
+#map_public_ip_on_launch = true                # Instances get a public IP
 #
-  #tags = {
-  #  Name = "public-subnet-${each.key + 1}"
- # }
+#tags = {
+#  Name = "public-subnet-${each.key + 1}"
+# }
 #}
 resource "aws_subnet" "public" {
   count             = length(var.public_subnet_cidr)
@@ -34,6 +34,8 @@ resource "aws_subnet" "public" {
     Name = "public-subnet-${count.index + 1}"
   }
 }
+
+
 # Elastic IP
 # A static public IP address for the NAT Gateway
 # Must be created in the VPC domain
@@ -42,8 +44,8 @@ resource "aws_eip" "nat" {
 }
 # NAT Gateway
 resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id   # Attach the Elastic IP
-  subnet_id = aws_subnet.public[0].id
+  allocation_id = aws_eip.nat.id # Attach the Elastic IP
+  subnet_id     = aws_subnet.public[0].id
 
   tags = {
     Name = "nat-gateway"
@@ -73,14 +75,14 @@ resource "aws_route_table" "public" {
   vpc_id = var.vpc_id
 
   route {
-    cidr_block = "0.0.0.0/0"                 # All internet traffic
+    cidr_block = "0.0.0.0/0" # All internet traffic
     gateway_id = aws_internet_gateway.igw.id
   }
 }
 
 # Associate the public subnet with the public route table
 resource "aws_route_table_association" "public" {
-  count = length(aws_subnet.public)
+  count          = length(aws_subnet.public)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
@@ -91,7 +93,7 @@ resource "aws_route_table" "private" {
   vpc_id = var.vpc_id
 
   route {
-    cidr_block     = "0.0.0.0/0"              # All internet traffic
+    cidr_block     = "0.0.0.0/0" # All internet traffic
     nat_gateway_id = aws_nat_gateway.nat.id
   }
 }

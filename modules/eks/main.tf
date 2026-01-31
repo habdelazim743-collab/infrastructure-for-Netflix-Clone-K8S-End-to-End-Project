@@ -6,10 +6,10 @@ resource "aws_iam_role" "eks_cluster_role" {
     Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole",
+        Action    = "sts:AssumeRole",
         Principal = { Service = "eks.amazonaws.com" },
-        Effect = "Allow",
-        Sid    = ""
+        Effect    = "Allow",
+        Sid       = ""
       }
     ]
   })
@@ -28,10 +28,10 @@ resource "aws_iam_role" "eks_node_role" {
     Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole",
+        Action    = "sts:AssumeRole",
         Principal = { Service = "ec2.amazonaws.com" },
-        Effect = "Allow",
-        Sid    = ""
+        Effect    = "Allow",
+        Sid       = ""
       }
     ]
   })
@@ -84,7 +84,7 @@ resource "aws_eks_node_group" "managed_nodes" {
   instance_types = [var.node_instance_type]
 
   remote_access {
-    ec2_ssh_key              = var.node_ssh_key_name
+    ec2_ssh_key               = var.node_ssh_key_name
     source_security_group_ids = var.ssh_source_security_group_ids
   }
 

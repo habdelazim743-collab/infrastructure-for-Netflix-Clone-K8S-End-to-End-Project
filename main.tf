@@ -1,119 +1,108 @@
+# ==========================
 # VPC Module
-
+# ==========================
 module "vpc" {
-  source = "./modules/vpc"
-
-  # VPC configuration
+  source   = "./modules/vpc"
   vpc_cidr = var.vpc_cidr
   vpc_name = var.vpc_name
 }
 
+# ==========================
 # Subnets Module
-
+# ==========================
 module "subnets" {
   source = "./modules/subnets"
-
-  # VPC ID from VPC module
   vpc_id = module.vpc.vpc_id
 
-  # Subnet configuration
   public_subnet_cidr   = var.public_subnet_cidr
   private_subnet_cidrs = var.private_subnet_cidrs
   azs                  = var.availability_zones
 }
-# IAM Module
-module "iam" {
-  source = "./modules/iam"
 
-  group_name = var.iam_group_name
-  users      = var.iam_users
+# ==========================
+# IAM Module
+# ==========================
+module "iam" {
+  source      = "./modules/iam"
+  group_name  = var.iam_group_name
+  users       = var.iam_users
 }
 
-# EC2 example in the first public subnet (10.0.1.0/24 by default)
+# ==========================
+# Security Groups
+# ==========================
+module "security_groups" {
+  source = "./modules/security_groups"
+  vpc_id = module.vpc.vpc_id
+}
+
+# ==========================
+# EC2 AMI Data
+# ==========================
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
   owners      = ["amazon"]
+
   filter {
     name   = "name"
     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
 }
 
-resource "aws_security_group" "public_ec2_sg" {
-  name   = "public-ec2-sg"
-  vpc_id = module.vpc.vpc_id
-
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# Register your local public key (optional)
+# ==========================
+# Jenkins User Key Pair
+# ==========================
 resource "aws_key_pair" "jenkins_user" {
-  count      = var.jenkins_user_public_key_path != "" ? 1 : 0
+  count      = var.jenkins_user_public_key != "" ? 1 : 0
   key_name   = var.jenkins_user_key_name
-  public_key = file(var.jenkins_user_public_key_path)
+  public_key = var.jenkins_user_public_key
 }
 
-# Generate SSH keypair for Jenkins to access private nodes (private key is written to Jenkins instance user_data)
+# ==========================
+# Jenkins Nodes Key Pair
+# ==========================
 resource "tls_private_key" "jenkins_nodes" {
+  count     = var.jenkins_nodes_public_key == "" && var.jenkins_nodes_private_key == "" ? 1 : 0
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
 resource "aws_key_pair" "jenkins_nodes" {
-  key_name = var.jenkins_nodes_key_name
-
-  # Use a provided public key if present, otherwise use the generated key
-  public_key = var.jenkins_nodes_public_key_path != "" ? file(var.jenkins_nodes_public_key_path) : tls_private_key.jenkins_nodes.public_key_openssh
+  key_name   = var.jenkins_nodes_key_name
+  public_key = var.jenkins_nodes_public_key != "" ? var.jenkins_nodes_public_key : tls_private_key.jenkins_nodes[0].public_key_openssh
 }
 
+# ==========================
+# Public EC2 (Jenkins)
+# ==========================
 resource "aws_instance" "public_ec2" {
-  ami                    = data.aws_ami.amazon_linux_2.id
-  instance_type          = var.ec2_instance_type
-  subnet_id              = module.subnets.public_subnet_cidr[0]
-  vpc_security_group_ids = [aws_security_group.public_ec2_sg.id]
+  ami                         = data.aws_ami.amazon_linux_2.id
+  instance_type               = var.ec2_instance_type
+  subnet_id                   = module.subnets.public_subnet_cidr[0]
+  vpc_security_group_ids      = [module.security_groups.public_security_group_id]
   associate_public_ip_address = true
 
-  # Allow you (local key) to SSH in if you provided a path
-  key_name = length(aws_key_pair.jenkins_user) > 0 ? aws_key_pair.jenkins_user[0].key_name : null
+  key_name             = length(aws_key_pair.jenkins_user) > 0 ? aws_key_pair.jenkins_user[0].key_name : null
   iam_instance_profile = module.iam.jenkins_instance_profile_name
 
   user_data = <<-EOF
-              #!/bin/bash
-              mkdir -p /home/ec2-user/.ssh
-              cat > /home/ec2-user/.ssh/jenkins_nodes_key <<'KEY'
-${var.jenkins_nodes_private_key_path != "" ? file(var.jenkins_nodes_private_key_path) : tls_private_key.jenkins_nodes.private_key_pem}
+    #!/bin/bash
+    mkdir -p /home/ec2-user/.ssh
+    cat > /home/ec2-user/.ssh/jenkins_nodes_key <<'KEY'
+${var.jenkins_nodes_private_key != "" ? var.jenkins_nodes_private_key : tls_private_key.jenkins_nodes[0].private_key_pem}
 KEY
-              chown ec2-user:ec2-user /home/ec2-user/.ssh/jenkins_nodes_key
-              chmod 600 /home/ec2-user/.ssh/jenkins_nodes_key
-              EOF
+    chown ec2-user:ec2-user /home/ec2-user/.ssh/jenkins_nodes_key
+    chmod 600 /home/ec2-user/.ssh/jenkins_nodes_key
+  EOF
 
   tags = {
     Name = "public-ec2"
   }
 }
 
-# EKS cluster module that deploys into the two private subnets
+# ==========================
+# EKS Cluster
+# ==========================
 module "eks" {
   source = "./modules/eks"
 
@@ -124,6 +113,19 @@ module "eks" {
   node_desired_size  = var.eks_node_desired_size
   node_max_size      = var.eks_node_max_size
 
-  node_ssh_key_name = aws_key_pair.jenkins_nodes.key_name
-  ssh_source_security_group_ids = [aws_security_group.public_ec2_sg.id]
+  node_ssh_key_name             = aws_key_pair.jenkins_nodes.key_name
+  ssh_source_security_group_ids = [module.security_groups.public_security_group_id]
+}
+
+# ==========================
+# Allow Jenkins EC2 SG to access EKS control plane
+# ==========================
+resource "aws_security_group_rule" "allow_jenkins_to_eks_control_plane" {
+  type                     = "ingress"
+  description              = "Allow Jenkins EC2 (public-ec2-sg) to access EKS control plane (HTTPS)"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  security_group_id        = module.eks.cluster_security_group_id
+  source_security_group_id = module.security_groups.public_security_group_id
 }
