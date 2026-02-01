@@ -17,3 +17,11 @@ output "node_group_name" {
   value       = aws_eks_node_group.managed_nodes.node_group_name
   description = "Managed node group name"
 }
+
+output "oidc_issuer_url" {
+  description = "OIDC issuer URL for IRSA"
+  value       = aws_eks_cluster.cluster.identity[0].oidc[0].issuer
+}
+
+
+

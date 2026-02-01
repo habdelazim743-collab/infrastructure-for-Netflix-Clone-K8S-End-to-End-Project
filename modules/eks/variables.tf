@@ -49,8 +49,5 @@ variable "node_max_size" {
   description = "Maximum number of nodes in the EKS managed node group"
   default     = 2
 }
-output "oidc_issuer_url" {
-  description = "OIDC issuer URL for IRSA"
-  value       = aws_eks_cluster.this.identity[0].oidc[0].issuer
-}
+
 
