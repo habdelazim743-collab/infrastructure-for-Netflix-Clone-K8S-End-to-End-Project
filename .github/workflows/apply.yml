@@ -26,12 +26,12 @@ jobs:
       - name: Terraform Init
         run: terraform init -input=false
 
-      - name: Import ALB Controller IAM Policy (if exists)
+      # 🔧 STEP مؤقت – يتشغّل مرة واحدة فقط
+      - name: Fix ServiceAccount state (one-time)
         run: |
-          terraform import \
-            module.iam_irsa.aws_iam_policy.alb_controller \
-            arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:policy/AWSLoadBalancerControllerIAMPolicy \
-          || echo "Skipping import"
+          terraform state mv \
+            module.k8s_addons.kubernetes_service_account.alb_controller \
+            module.k8s_addons.kubernetes_service_account_v1.alb_controller || true
 
       - name: Update kubeconfig for EKS
         run: |
