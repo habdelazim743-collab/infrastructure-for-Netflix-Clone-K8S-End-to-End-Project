@@ -1,4 +1,4 @@
-resource "kubernetes_service_account" "alb_controller" {
+resource "kubernetes_service_account_v1" "alb_controller" {
   metadata {
     name      = "aws-load-balancer-controller"
     namespace = "kube-system"
@@ -15,6 +15,8 @@ resource "helm_release" "alb_controller" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
 
+  timeout = 900
+  wait = true
   values = [
     yamlencode({
       clusterName = var.cluster_name
