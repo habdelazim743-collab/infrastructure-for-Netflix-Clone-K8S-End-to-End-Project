@@ -1,3 +1,8 @@
+locals {
+  oidc_provider  = replace(var.oidc_issuer_url, "https://", "")
+  oidc_sub_key   = "${local.oidc_provider}:sub"
+}
+
 # ==========================
 # OIDC Provider
 # ==========================
@@ -16,6 +21,7 @@ resource "aws_iam_policy" "alb_controller" {
   policy = file("${path.module}/iam_policy.json")
 }
 
+
 # ==========================
 # IAM Role (IRSA)
 # ==========================
@@ -32,13 +38,13 @@ resource "aws_iam_role" "alb_controller" {
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
-          "${replace(var.oidc_issuer_url, "https://", "")}:sub" =
-          "system:serviceaccount:kube-system:aws-load-balancer-controller"
+          (local.oidc_sub_key) = "system:serviceaccount:kube-system:aws-load-balancer-controller"
         }
       }
     }]
   })
 }
+
 
 # ==========================
 # Attach Policy to Role
