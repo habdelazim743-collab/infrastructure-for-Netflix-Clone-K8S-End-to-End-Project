@@ -70,4 +70,8 @@ output "jenkins_nodes_key_name" {
   description = "Key pair name created for Jenkins to SSH into EKS nodes"
   value       = aws_key_pair.jenkins_nodes.key_name
 }
+output "jenkins_public_ip" {
+  description = "Public IP of Jenkins EC2 instance"
+  value       = aws_instance.public_ec2.public_ip
+}
 

@@ -87,18 +87,49 @@ resource "aws_instance" "public_ec2" {
 
   user_data = <<-EOF
     #!/bin/bash
+    set -e
+
+    yum update -y
+
+    # Install Java (Jenkins dependency)
+    amazon-linux-extras install java-openjdk11 -y
+
+    # Add Jenkins repo
+    wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+    rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+
+    # Install Jenkins
+    yum install jenkins -y
+
+    # Enable & start Jenkins
+    systemctl enable jenkins
+    systemctl start jenkins
+
+    # Prepare SSH key for Jenkins agents
     mkdir -p /home/ec2-user/.ssh
     cat > /home/ec2-user/.ssh/jenkins_nodes_key <<'KEY'
 ${var.jenkins_nodes_private_key != "" ? var.jenkins_nodes_private_key : tls_private_key.jenkins_nodes[0].private_key_pem}
 KEY
+
     chown ec2-user:ec2-user /home/ec2-user/.ssh/jenkins_nodes_key
     chmod 600 /home/ec2-user/.ssh/jenkins_nodes_key
   EOF
 
   tags = {
-    Name = "public-ec2"
+    Name = "jenkins-ec2"
   }
+
+  depends_on = [
+    module.vpc,
+    module.subnets,
+    module.security_groups,
+    module.iam,
+    aws_key_pair.jenkins_user,
+    aws_key_pair.jenkins_nodes,
+    tls_private_key.jenkins_nodes
+  ]
 }
+
 
 # ==========================
 # EKS Cluster
