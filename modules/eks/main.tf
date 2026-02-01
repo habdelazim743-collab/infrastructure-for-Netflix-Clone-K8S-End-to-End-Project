@@ -62,7 +62,7 @@ resource "aws_eks_cluster" "cluster" {
 
     # Keep the control plane accessible only via the private endpoint by default
     endpoint_private_access = true
-    endpoint_public_access  = false
+    endpoint_public_access  = true
   }
 
   depends_on = [aws_iam_role_policy_attachment.cluster_AmazonEKSClusterPolicy]
