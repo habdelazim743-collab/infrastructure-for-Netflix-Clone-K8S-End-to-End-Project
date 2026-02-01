@@ -26,13 +26,6 @@ jobs:
       - name: Terraform Init
         run: terraform init -input=false
 
-      # 🔧 STEP مؤقت – نقل ServiceAccount من القديم للجديد في الـ state
-      - name: Fix ServiceAccount state (one-time)
-        run: |
-          terraform state mv \
-            module.k8s_addons.kubernetes_service_account.alb_controller \
-            module.k8s_addons.kubernetes_service_account_v1.alb_controller || true
-
       # 🔧 STEP مؤقت – استيراد Helm Release الموجود بالفعل
       - name: Import ALB Controller Helm Release (one-time)
         run: |
