@@ -129,3 +129,4 @@ resource "aws_iam_instance_profile" "jenkins_instance_profile" {
   role = aws_iam_role.jenkins_ec2_role.name
 }
 
+
