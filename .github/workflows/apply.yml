@@ -31,7 +31,13 @@ jobs:
           terraform import \
             module.iam_irsa.aws_iam_policy.alb_controller \
             arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:policy/AWSLoadBalancerControllerIAMPolicy \
-          || echo "IAM Policy already managed or does not exist, skipping import"
+          || echo "Skipping import"
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ secrets.AWS_REGION }} \
+            --name netflix-eks-cluster
 
       - name: Terraform Apply
         env:
