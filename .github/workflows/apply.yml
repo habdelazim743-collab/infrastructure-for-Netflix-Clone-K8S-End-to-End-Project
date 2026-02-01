@@ -28,3 +28,7 @@ jobs:
           TF_VAR_jenkins_nodes_public_key: ${{ secrets.JENKINS_NODES_PUBLIC_KEY }}
           TF_VAR_jenkins_nodes_private_key: ${{ secrets.JENKINS_NODES_PRIVATE_KEY }}
         run: terraform apply -auto-approve
+
+      - name: Show Terraform Outputs
+        run: terraform apply -auto-approve
+        
