@@ -133,7 +133,7 @@ resource "aws_security_group_rule" "allow_jenkins_to_eks_control_plane" {
 # IAM IRSA (ALB Controller)
 # ==========================
 module "iam_irsa" {
-  source = "./modules/iam_irsa"
+  source          = "./modules/iam_irsa"
   oidc_issuer_url = module.eks.oidc_issuer_url
 }
 # ==========================
