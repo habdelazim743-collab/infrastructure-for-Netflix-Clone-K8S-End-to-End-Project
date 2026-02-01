@@ -16,7 +16,7 @@ resource "helm_release" "alb_controller" {
   chart      = "aws-load-balancer-controller"
 
   timeout = 900
-  wait = true
+  wait = false
   values = [
     yamlencode({
       clusterName = var.cluster_name
