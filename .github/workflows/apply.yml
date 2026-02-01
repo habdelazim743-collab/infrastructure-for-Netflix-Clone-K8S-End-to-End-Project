@@ -26,13 +26,6 @@ jobs:
       - name: Terraform Init
         run: terraform init -input=false
 
-      # 🔧 STEP مؤقت – استيراد Helm Release الموجود بالفعل
-      - name: Import ALB Controller Helm Release (one-time)
-        run: |
-          terraform import \
-            module.k8s_addons.helm_release.alb_controller \
-            kube-system/aws-load-balancer-controller || true
-
       - name: Update kubeconfig for EKS
         run: |
           aws eks update-kubeconfig \
