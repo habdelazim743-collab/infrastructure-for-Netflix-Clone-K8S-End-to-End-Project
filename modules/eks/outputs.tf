@@ -22,6 +22,10 @@ output "oidc_issuer_url" {
   description = "OIDC issuer URL for IRSA"
   value       = aws_eks_cluster.cluster.identity[0].oidc[0].issuer
 }
+output "cluster_ca_certificate" {
+  description = "Base64 encoded CA certificate for the EKS cluster"
+  value       = aws_eks_cluster.cluster.certificate_authority[0].data
+}
 
 
 
