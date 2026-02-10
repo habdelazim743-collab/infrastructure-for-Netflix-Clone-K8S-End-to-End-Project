@@ -1,7 +1,11 @@
-name: Terraform Destroy (Manual)
+name: Terraform Destroy (2 Stages)
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type DESTROY to confirm destruction"
+        required: true
 
 jobs:
   destroy:
@@ -22,7 +26,23 @@ jobs:
 
       - run: terraform init -input=false
 
-      - name: Terraform Destroy
+      - name: Confirm execution
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "DESTROY" ]; then
+            echo "Confirmation failed. Type DESTROY to confirm."
+            exit 1
+          fi
+
+      # Stage 1: Remove K8s Add-ons first
+      - name: Remove K8s Add-ons (enable_k8s=false)
+        env:
+          TF_VAR_jenkins_user_public_key: ${{ secrets.JENKINS_USER_PUBLIC_KEY }}
+          TF_VAR_jenkins_nodes_public_key: ${{ secrets.JENKINS_NODES_PUBLIC_KEY }}
+          TF_VAR_jenkins_nodes_private_key: ${{ secrets.JENKINS_NODES_PRIVATE_KEY }}
+        run: terraform apply -auto-approve -var="enable_k8s=false"
+
+      # Stage 2: Destroy remaining infra
+      - name: Destroy Infra
         env:
           TF_VAR_jenkins_user_public_key: ${{ secrets.JENKINS_USER_PUBLIC_KEY }}
           TF_VAR_jenkins_nodes_public_key: ${{ secrets.JENKINS_NODES_PUBLIC_KEY }}
