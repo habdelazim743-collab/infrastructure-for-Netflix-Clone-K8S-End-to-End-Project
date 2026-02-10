@@ -1,7 +1,11 @@
-name: Terraform Apply (Manual)
+name: Terraform Apply (2 Stages)
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type APPLY to confirm deployment"
+        required: true
 
 jobs:
   apply:
@@ -26,13 +30,30 @@ jobs:
       - name: Terraform Init
         run: terraform init -input=false
 
+      - name: Confirm execution
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "APPLY" ]; then
+            echo "Confirmation failed. Type APPLY to confirm."
+            exit 1
+          fi
+
+      # Stage 1: Base Infra + EKS (no K8s add-ons)
+      - name: Apply Base Infra (enable_k8s=false)
+        env:
+          TF_VAR_jenkins_user_public_key: ${{ secrets.JENKINS_USER_PUBLIC_KEY }}
+          TF_VAR_jenkins_nodes_public_key: ${{ secrets.JENKINS_NODES_PUBLIC_KEY }}
+          TF_VAR_jenkins_nodes_private_key: ${{ secrets.JENKINS_NODES_PRIVATE_KEY }}
+        run: terraform apply -auto-approve -var="enable_k8s=false"
+
+      # (اختياري) تحديث kubeconfig لو محتاجه للـ providers اللي بتكلم الكلاستر
       - name: Update kubeconfig for EKS
         run: |
           aws eks update-kubeconfig \
             --region ${{ secrets.AWS_REGION }} \
             --name netflix-eks-cluster
 
-      - name: Terraform Apply
+      # Stage 2: K8s Add-ons
+      - name: Apply K8s Add-ons (enable_k8s=true)
         env:
           TF_VAR_jenkins_user_public_key: ${{ secrets.JENKINS_USER_PUBLIC_KEY }}
           TF_VAR_jenkins_nodes_public_key: ${{ secrets.JENKINS_NODES_PUBLIC_KEY }}
