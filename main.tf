@@ -72,7 +72,7 @@ resource "tls_private_key" "jenkins_nodes" {
 
 resource "aws_key_pair" "jenkins_nodes" {
   key_name   = var.jenkins_nodes_key_name
-  public_key = var.jenkins_nodes_public_key != "" ? file(var.jenkins_nodes_public_key) : tls_private_key.jenkins_nodes[0].public_key_openssh
+  public_key = var.jenkins_nodes_public_key != "" ? var.jenkins_nodes_public_key : tls_private_key.jenkins_nodes[0].public_key_openssh
 }
 
 # ==========================
