@@ -33,8 +33,8 @@ module "iam" {
 # Security Groups
 # ==========================
 module "security_groups" {
-  source = "./modules/security_groups"
-  vpc_id = module.vpc.vpc_id
+  source   = "./modules/security_groups"
+  vpc_id   = module.vpc.vpc_id
   vpc_cidr = var.vpc_cidr
 }
 
@@ -81,14 +81,14 @@ resource "aws_key_pair" "jenkins_nodes" {
 module "jenkins_ec2" {
   source = "./modules/ec2"
 
-  ami_id                = data.aws_ami.amazon_linux_2.id
-  instance_type         = var.ec2_instance_type
-  subnet_id             = module.subnets.public_subnet_ids[0]
-  security_group_ids    = [module.security_groups.public_security_group_id]
-  key_name              = length(aws_key_pair.jenkins_user) > 0 ? aws_key_pair.jenkins_user[0].key_name : null
-  iam_instance_profile  = module.iam.jenkins_instance_profile_name
+  ami_id                    = data.aws_ami.amazon_linux_2.id
+  instance_type             = var.ec2_instance_type
+  subnet_id                 = module.subnets.public_subnet_ids[0]
+  security_group_ids        = [module.security_groups.public_security_group_id]
+  key_name                  = length(aws_key_pair.jenkins_user) > 0 ? aws_key_pair.jenkins_user[0].key_name : null
+  iam_instance_profile      = module.iam.jenkins_instance_profile_name
   jenkins_nodes_private_key = var.jenkins_nodes_private_key
-  instance_name         = "jenkins-ec2"
+  instance_name             = "jenkins-ec2"
 
   depends_on = [
     module.vpc,
@@ -123,7 +123,7 @@ module "eks" {
     module.iam,
     module.rds
   ]
-  }
+}
 
 # ==========================
 # Allow Jenkins EC2 SG to access EKS control plane
@@ -158,12 +158,12 @@ module "k8s_addons" {
   cluster_name = var.eks_cluster_name
   aws_region   = var.aws_region
   vpc_id       = module.vpc.vpc_id
-  enable_k8s = var.enable_k8s
+  enable_k8s   = var.enable_k8s
 
   alb_controller_role_arn   = module.iam_irsa.alb_controller_role_arn
   external_secrets_role_arn = module.iam_irsa.external_secrets_role_arn
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  cluster_version   = "1.34"
+  oidc_provider_arn         = module.eks.oidc_provider_arn
+  cluster_version           = "1.34"
   tags = {
     Environment = "production"
     Project     = "netflix-clone"
@@ -178,7 +178,7 @@ module "k8s_addons" {
     module.eks,
     module.iam_irsa
   ]
-  
+
 }
 #############################################
 # RDS – KEYCLOAK DATABASE
@@ -204,7 +204,7 @@ module "rds" {
 module "secrets_aws" {
   source = "./modules/secrets_aws"
 
-  environment              = "production"
+  environment               = "production"
   keycloak_admin_secret_arn = var.keycloak_admin_secret_arn
 }
 

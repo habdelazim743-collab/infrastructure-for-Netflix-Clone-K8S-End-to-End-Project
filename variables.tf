@@ -130,9 +130,9 @@ variable "keycloak_db_secret_arn" {
   default     = "arn:aws:secretsmanager:us-east-1:231056963705:secret:keycloak-db-mu2bry"
 }
 #variable "keycloak_admin_password" {
-  #type      = string
-  #sensitive = true
- # description = "Keycloak admin password"
+#type      = string
+#sensitive = true
+# description = "Keycloak admin password"
 #}
 variable "enable_k8s" {
   type    = bool

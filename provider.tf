@@ -9,22 +9,22 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
-    
+
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = "~> 3.0"
     }
-    
+
     helm = {
       source  = "hashicorp/helm"
       version = "~> 3.0"
     }
-    
+
     tls = {
       source  = "hashicorp/tls"
       version = "~> 4.0"
     }
-    
+
     time = {
       source  = "hashicorp/time"
       version = "~> 0.9"
@@ -75,7 +75,7 @@ provider "kubernetes" {
 # ==========================
 provider "helm" {
   kubernetes = {
-    host                   = data.aws_eks_cluster.this.endpoint
+    host = data.aws_eks_cluster.this.endpoint
     cluster_ca_certificate = base64decode(
       data.aws_eks_cluster.this.certificate_authority[0].data
     )

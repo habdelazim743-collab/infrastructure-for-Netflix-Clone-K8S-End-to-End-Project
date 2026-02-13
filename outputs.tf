@@ -77,7 +77,7 @@ output "jenkins_nodes_key_name" {
   value       = aws_key_pair.jenkins_nodes.key_name
 }
 output "cluster_token" {
-  value = data.aws_eks_cluster_auth.this.token
+  value     = data.aws_eks_cluster_auth.this.token
   sensitive = true
 }
 #############################################
@@ -92,7 +92,7 @@ output "keycloak_db_endpoint" {
 output "keycloak_db_port" {
   description = "Keycloak RDS port"
   value       = module.rds.port
-  sensitive = true
+  sensitive   = true
 }
 
 
