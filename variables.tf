@@ -122,7 +122,7 @@ variable "jenkins_nodes_public_key" {
 variable "jenkins_nodes_private_key" {
   type        = string
   description = "Private key Jenkins uses to SSH into EKS nodes (from GitHub Secret)"
-  default     = "C:/Users/husseinelbarawy/.ssh/jenkins_nodes"
+  default     = ""
 }
 variable "keycloak_db_secret_arn" {
   description = "ARN of the existing RDS-managed secret for the Keycloak database"
