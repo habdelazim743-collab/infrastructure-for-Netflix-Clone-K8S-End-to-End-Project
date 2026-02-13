@@ -58,7 +58,7 @@ data "aws_ami" "amazon_linux_2" {
 resource "aws_key_pair" "jenkins_user" {
   count      = var.jenkins_user_public_key != "" ? 1 : 0
   key_name   = var.jenkins_user_key_name
-  public_key = file(var.jenkins_user_public_key)
+  public_key = var.jenkins_user_public_key
 }
 
 # ==========================
