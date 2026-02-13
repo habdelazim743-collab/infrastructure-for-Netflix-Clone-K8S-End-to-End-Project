@@ -1,11 +1,11 @@
 # this file will print the output of your creation in the screen
-output "public_subnet_cidr" {
-  description = "IDs of public subnets where the NAT Gateway and internet-facing resources are deployed"
+output "public_subnet_ids" {
+  description = "IDs of public subnets"
   value       = aws_subnet.public[*].id
 }
 
-output "private_subnet_cidrs" {
-  description = "List of IDs of the private subnets that use the NAT Gateway for outbound internet access"
+output "private_subnet_ids" {
+  description = "IDs of private subnets"
   value       = aws_subnet.private[*].id
 }
 # Internet Gateway Outputs

@@ -16,15 +16,16 @@ output "internet_gateway_name" {
 }
 
 # Subnets
-output "public_subnet_cidr" {
+output "public_subnet_ids" {
   description = "IDs of the public subnets"
-  value       = module.subnets.public_subnet_cidr
+  value       = module.subnets.public_subnet_ids
 }
 
-output "private_subnet_cidrs" {
-  description = "List of IDs of the private subnets"
-  value       = module.subnets.private_subnet_cidrs
+output "private_subnet_ids" {
+  description = "IDs of the private subnets"
+  value       = module.subnets.private_subnet_ids
 }
+
 
 # NAT Gateway
 output "nat_gateway_id" {
@@ -59,16 +60,39 @@ output "iam_users" {
   value       = module.iam.iam_users
 }
 
-# Jenkins EC2 public IP (if present)
 output "jenkins_public_ip" {
-  description = "Public IP of the Jenkins EC2 instance (if created)."
-  value       = aws_instance.public_ec2.public_ip
+  description = "Public IP of Jenkins EC2"
+  value       = module.jenkins_ec2.public_ip
 }
+
+output "jenkins_public_dns" {
+  description = "Public DNS of Jenkins EC2"
+  value       = module.jenkins_ec2.public_dns
+}
+
 
 # Name of auto-generated keypair used by Jenkins to SSH to nodes
 output "jenkins_nodes_key_name" {
   description = "Key pair name created for Jenkins to SSH into EKS nodes"
   value       = aws_key_pair.jenkins_nodes.key_name
+}
+output "cluster_token" {
+  value = data.aws_eks_cluster_auth.this.token
+  sensitive = true
+}
+#############################################
+# RDS OUTPUTS
+#############################################
+
+output "keycloak_db_endpoint" {
+  description = "Keycloak RDS endpoint"
+  value       = module.rds.endpoint
+}
+
+output "keycloak_db_port" {
+  description = "Keycloak RDS port"
+  value       = module.rds.port
+  sensitive = true
 }
 
 

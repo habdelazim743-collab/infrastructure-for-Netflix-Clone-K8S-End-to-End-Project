@@ -17,6 +17,7 @@ module "subnets" {
   public_subnet_cidr   = var.public_subnet_cidr
   private_subnet_cidrs = var.private_subnet_cidrs
   azs                  = var.availability_zones
+  cluster_name         = var.eks_cluster_name
 }
 
 # ==========================
@@ -34,7 +35,9 @@ module "iam" {
 module "security_groups" {
   source = "./modules/security_groups"
   vpc_id = module.vpc.vpc_id
+  vpc_cidr = var.vpc_cidr
 }
+
 
 # ==========================
 # EC2 AMI Data
@@ -55,7 +58,7 @@ data "aws_ami" "amazon_linux_2" {
 resource "aws_key_pair" "jenkins_user" {
   count      = var.jenkins_user_public_key != "" ? 1 : 0
   key_name   = var.jenkins_user_key_name
-  public_key = var.jenkins_user_public_key
+  public_key = file(var.jenkins_user_public_key)
 }
 
 # ==========================
@@ -69,64 +72,29 @@ resource "tls_private_key" "jenkins_nodes" {
 
 resource "aws_key_pair" "jenkins_nodes" {
   key_name   = var.jenkins_nodes_key_name
-  public_key = var.jenkins_nodes_public_key != "" ? var.jenkins_nodes_public_key : tls_private_key.jenkins_nodes[0].public_key_openssh
+  public_key = var.jenkins_nodes_public_key != "" ? file(var.jenkins_nodes_public_key) : tls_private_key.jenkins_nodes[0].public_key_openssh
 }
 
 # ==========================
 # Public EC2 (Jenkins)
 # ==========================
-resource "aws_instance" "public_ec2" {
-  ami                         = data.aws_ami.amazon_linux_2.id
-  instance_type               = var.ec2_instance_type
-  subnet_id                   = module.subnets.public_subnet_cidr[0]
-  vpc_security_group_ids      = [module.security_groups.public_security_group_id]
-  associate_public_ip_address = true
+module "jenkins_ec2" {
+  source = "./modules/ec2"
 
-  key_name             = length(aws_key_pair.jenkins_user) > 0 ? aws_key_pair.jenkins_user[0].key_name : null
-  iam_instance_profile = module.iam.jenkins_instance_profile_name
-
-  user_data = <<-EOF
-    #!/bin/bash
-    set -e
-
-    yum update -y
-
-    # Install Java (Jenkins dependency)
-    amazon-linux-extras install java-openjdk11 -y
-
-    # Add Jenkins repo
-    wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
-    rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
-
-    # Install Jenkins
-    yum install jenkins -y
-
-    # Enable & start Jenkins
-    systemctl enable jenkins
-    systemctl start jenkins
-
-    # Prepare SSH key for Jenkins agents
-    mkdir -p /home/ec2-user/.ssh
-    cat > /home/ec2-user/.ssh/jenkins_nodes_key <<'KEY'
-${var.jenkins_nodes_private_key != "" ? var.jenkins_nodes_private_key : tls_private_key.jenkins_nodes[0].private_key_pem}
-KEY
-
-    chown ec2-user:ec2-user /home/ec2-user/.ssh/jenkins_nodes_key
-    chmod 600 /home/ec2-user/.ssh/jenkins_nodes_key
-  EOF
-
-  tags = {
-    Name = "jenkins-ec2"
-  }
+  ami_id                = data.aws_ami.amazon_linux_2.id
+  instance_type         = var.ec2_instance_type
+  subnet_id             = module.subnets.public_subnet_ids[0]
+  security_group_ids    = [module.security_groups.public_security_group_id]
+  key_name              = length(aws_key_pair.jenkins_user) > 0 ? aws_key_pair.jenkins_user[0].key_name : null
+  iam_instance_profile  = module.iam.jenkins_instance_profile_name
+  jenkins_nodes_private_key = var.jenkins_nodes_private_key
+  instance_name         = "jenkins-ec2"
 
   depends_on = [
     module.vpc,
     module.subnets,
     module.security_groups,
-    module.iam,
-    aws_key_pair.jenkins_user,
-    aws_key_pair.jenkins_nodes,
-    tls_private_key.jenkins_nodes
+    module.iam
   ]
 }
 
@@ -138,7 +106,7 @@ module "eks" {
   source = "./modules/eks"
 
   cluster_name       = var.eks_cluster_name
-  private_subnet_ids = module.subnets.private_subnet_cidrs
+  private_subnet_ids = module.subnets.private_subnet_ids
   node_instance_type = var.eks_node_instance_type
   node_min_size      = var.eks_node_min_size
   node_desired_size  = var.eks_node_desired_size
@@ -146,7 +114,16 @@ module "eks" {
 
   node_ssh_key_name             = aws_key_pair.jenkins_nodes.key_name
   ssh_source_security_group_ids = [module.security_groups.public_security_group_id]
-}
+
+
+  depends_on = [
+    module.vpc,
+    module.subnets,
+    module.security_groups,
+    module.iam,
+    module.rds
+  ]
+  }
 
 # ==========================
 # Allow Jenkins EC2 SG to access EKS control plane
@@ -166,16 +143,69 @@ resource "aws_security_group_rule" "allow_jenkins_to_eks_control_plane" {
 module "iam_irsa" {
   source          = "./modules/iam_irsa"
   oidc_issuer_url = module.eks.oidc_issuer_url
+
+  #depends_on = [ module.eks ]
 }
 # ==========================
 # Kubernetes Addons (ALB Controller)
 # ==========================
+# ==========================
+# Kubernetes Addons
+# ==========================
 module "k8s_addons" {
   source = "./modules/k8s_addons"
 
-  cluster_name            = var.eks_cluster_name
-  alb_controller_role_arn = module.iam_irsa.alb_controller_role_arn
-}
+  cluster_name = var.eks_cluster_name
+  aws_region   = var.aws_region
+  vpc_id       = module.vpc.vpc_id
+  enable_k8s = var.enable_k8s
 
+  alb_controller_role_arn   = module.iam_irsa.alb_controller_role_arn
+  external_secrets_role_arn = module.iam_irsa.external_secrets_role_arn
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  cluster_version   = "1.34"
+  tags = {
+    Environment = "production"
+    Project     = "netflix-clone"
+    ManagedBy   = "terraform"
+  }
+  providers = {
+    kubernetes = kubernetes
+    helm       = helm
+  }
+
+  depends_on = [
+    module.eks,
+    module.iam_irsa
+  ]
+  
+}
+#############################################
+# RDS – KEYCLOAK DATABASE
+#############################################
+
+# ==========================
+# RDS
+# ==========================
+module "rds" {
+  source = "./modules/rds"
+
+  vpc_id            = module.vpc.vpc_id
+  subnet_ids        = module.subnets.private_subnet_ids
+  security_group_id = module.security_groups.rds_sg_id
+  #rds_sg_id    = module.security_groups.rds_sg_id
+
+
+  db_secret_arn = var.keycloak_db_secret_arn
+}
+# ======================================================
+# Secrets (Keycloak + OAuth2 Proxy)
+# ======================================================
+module "secrets_aws" {
+  source = "./modules/secrets_aws"
+
+  environment              = "production"
+  keycloak_admin_secret_arn = var.keycloak_admin_secret_arn
+}
 
 

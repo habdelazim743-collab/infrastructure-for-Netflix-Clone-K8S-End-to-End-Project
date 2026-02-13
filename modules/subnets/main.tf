@@ -13,17 +13,7 @@ resource "aws_internet_gateway" "igw" {
 # This subnet is public because:
 # - map_public_ip_on_launch = true
 # - It will be associated with a route table that has a route to the IGW
-#resource "aws_subnet" "public" {
-# for_each = {for idx, cidr in var.public_subnet_cidr : idx => cidr }
-# vpc_id                  = var.vpc_id
-# cidr_block              = each.value
-# availability_zone       = var.azs[each.key % length(var.azs)]          # First Availability Zone
-#map_public_ip_on_launch = true                # Instances get a public IP
-#
-#tags = {
-#  Name = "public-subnet-${each.key + 1}"
-# }
-#}
+
 resource "aws_subnet" "public" {
   count             = length(var.public_subnet_cidr)
   vpc_id            = var.vpc_id
@@ -32,6 +22,9 @@ resource "aws_subnet" "public" {
 
   tags = {
     Name = "public-subnet-${count.index + 1}"
+
+    "kubernetes.io/role/elb" = "1"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
 }
 
@@ -66,6 +59,9 @@ resource "aws_subnet" "private" {
 
   tags = {
     Name = "private-subnet-${count.index + 1}"
+
+    "kubernetes.io/role/internal-elb" = "1"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
 }
 # Public Route Table

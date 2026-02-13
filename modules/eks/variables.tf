@@ -17,13 +17,13 @@ variable "private_subnet_ids" {
 variable "node_instance_type" {
   type        = string
   description = "Instance type for EKS worker nodes"
-  default     = "t3.medium"
+  default     = "t3.large"
 }
 
 variable "node_min_size" {
   type        = number
   description = "Minimum number of nodes in the EKS managed node group"
-  default     = 1
+  default     = 2
 }
 
 variable "node_ssh_key_name" {
@@ -41,13 +41,13 @@ variable "ssh_source_security_group_ids" {
 variable "node_desired_size" {
   type        = number
   description = "Desired number of nodes in the EKS managed node group"
-  default     = 1
+  default     = 2
 }
 
 variable "node_max_size" {
   type        = number
   description = "Maximum number of nodes in the EKS managed node group"
-  default     = 2
+  default     = 3
 }
 
 

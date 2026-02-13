@@ -6,7 +6,7 @@ variable "vpc_id" {
 
 variable "public_subnet_cidr" {
   type        = list(string)
-  description = "CIDR block for the public subnet (e.g. 10.0.1.0/24)"
+  description = "List of CIDR blocks for the public subnet (e.g. 10.0.1.0/24)"
 }
 
 variable "private_subnet_cidrs" {
@@ -17,4 +17,8 @@ variable "private_subnet_cidrs" {
 variable "azs" {
   type        = list(string)
   description = "List of Availability Zones used for subnets (one AZ per subnet)"
+}
+variable "cluster_name" {
+  type        = string
+  description = "EKS cluster name"
 }
